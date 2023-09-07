@@ -1,6 +1,5 @@
 package ru.raccoon;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.config.RequestConfig;
@@ -9,8 +8,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
+import java.io.InputStream;
 
 public class Main {
     public static final String REMOTE_SERVICE_URI = "https://api.nasa.gov/planetary/apod?api_key=fPwmgjfc9ML9U4fFixoxqnTdVwd3eQD02BSfcu0K";
@@ -30,8 +30,24 @@ public class Main {
         HttpGet request = new HttpGet(REMOTE_SERVICE_URI);
         CloseableHttpResponse response = httpClient.execute(request);
 
-        NASAData nasaData = mapper.readValue(response.getEntity().getContent(), NASAData.class);
+        NASAData nasaData = mapper.readValue(response.getEntity().getContent(), NASAData.class); //десериализуем
 
-        System.out.println(nasaData);
+        request = new HttpGet(nasaData.getUrl());
+        response = httpClient.execute(request); //выполняем запрос по полученному url
+
+        InputStream inputStream = response.getEntity().getContent(); //входящий поток
+
+        //сохраняем входящий поток в файл
+        try (FileOutputStream fileOutputStream = new FileOutputStream(setFileName(nasaData.getUrl()))) {
+            int inByte;
+            while((inByte = inputStream.read()) != -1)
+                fileOutputStream.write(inByte);
+        }
+    }
+
+    //метод для определения имени сохраняемого файла
+    public static String setFileName(String inputString) {
+        int lastIndex = inputString.lastIndexOf("/");
+        return lastIndex == -1 ? "unnamedFile" : inputString.substring(lastIndex + 1);
     }
 }
